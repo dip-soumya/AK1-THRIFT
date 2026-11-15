@@ -14,7 +14,8 @@ pip install -r requirements.txt
 python main.py          # or double-click run.bat on Windows
 ```
 
-Requires Python 3.10+ (Tkinter ships with Python).
+Requires Python 3.10+ (Tkinter ships with Python). The app opens **full screen** and lays itself out
+to the screen size — press **F11** to switch between full screen and a window, **Esc** to leave full screen.
 
 ## Tkinter at the core
 

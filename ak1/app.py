@@ -151,11 +151,14 @@ class App:
         self.root = root = tk.Tk()
         root.withdraw()
         theme.init_fonts(root)
+        # full screen: every page lays itself out from the real screen size
         sw, sh = root.winfo_screenwidth(), root.winfo_screenheight()
-        self.W = min(1400, sw - 40)
-        self.Hf = min(900, sh - 90)
-        root.geometry(f"{self.W}x{self.Hf}+{(sw - self.W) // 2}+{max(0, (sh - self.Hf) // 2 - 20)}")
-        root.resizable(False, False)
+        self.W, self.Hf = sw, sh
+        root.geometry(f"{sw}x{sh}+0+0")
+        root.minsize(1100, 680)
+        root.attributes("-fullscreen", True)
+        self.in_store = False
+        self._relayout_job = None
         root.title("AK1-THRIFT  —  second hand, first class")
         root.configure(bg=theme.INK)
         self._icon()
@@ -177,6 +180,9 @@ class App:
         root.bind("<Home>", lambda e: self._key(e, "home"))
         root.bind("<End>", lambda e: self._key(e, "end"))
         root.bind("<Escape>", lambda e: None)
+        root.bind_all("<Escape>", self._esc, add="+")       # leave full screen (unless a sheet is open)
+        root.bind_all("<F11>", lambda e: self.toggle_fullscreen())
+        root.bind("<Configure>", self._on_configure)
         self.pages = self._registry()
         self._show_intro()
         root.deiconify()
@@ -234,6 +240,60 @@ class App:
             p.scroll_to(p.max_scroll)
         else:
             p.scroll_by(d)
+
+    # ------------------------------------------------------------------ #
+    #  full screen / window size
+    # ------------------------------------------------------------------ #
+    def toggle_fullscreen(self, on=None):
+        root = self.root
+        on = (not root.attributes("-fullscreen")) if on is None else on
+        root.attributes("-fullscreen", on)
+        if not on:
+            root.state("zoomed")              # windowed, but still filling the screen
+
+    def _esc(self, e):
+        if self.page is not None and self.page.modal is not None:
+            return                            # Esc closes the quick-view sheet first
+        if self.root.attributes("-fullscreen"):
+            self.toggle_fullscreen(False)
+
+    def _on_configure(self, e):
+        if e.widget is not self.root:
+            return
+        if abs(e.width - self.W) < 4 and abs(e.height - self.Hf) < 4:
+            return
+        if self._relayout_job:
+            self.root.after_cancel(self._relayout_job)
+        self._relayout_job = self.root.after(250, self._relayout)
+
+    def _relayout(self):
+        """Window size changed (F11, maximise, resize): rebuild the nav + current page at the new size."""
+        self._relayout_job = None
+        root = self.root
+        if self.busy or self.page is None:
+            self._relayout_job = root.after(300, self._relayout)
+            return
+        w, h = root.winfo_width(), root.winfo_height()
+        if abs(w - self.W) < 4 and abs(h - self.Hf) < 4:
+            return
+        self.W, self.Hf = w, h
+        key, y = self.page.key, self.page.applied
+        # nav bar is laid out from the width -> rebuild it
+        self.nav.alive = False
+        self.nav.destroy()
+        self.nav = NavBar(self)
+        self.nav.set_count(sum(i["qty"] for i in self.cart))
+        if key == "intro":
+            self.stage_h = self.Hf
+            page = self._mount("intro")
+            page.on_enter()
+            return
+        self.nav.pack(side="top", fill="x", before=self.stage)
+        self.nav.set_active(key)
+        self.stage_h = self.Hf - NAV_H
+        page = self._mount(key)
+        page.scroll_to(min(y, page.max_scroll), instant=True)
+        page.on_enter()
 
     # ------------------------------------------------------------------ #
     def _mount(self, key, **kw):

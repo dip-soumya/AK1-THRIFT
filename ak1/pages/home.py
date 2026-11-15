@@ -43,10 +43,12 @@ class HomePage(Page):
         # faint grid lines (editorial feel)
         for gx in range(M, W, (W - 2 * M) // 6):
             cv.create_line(gx, y0, gx, y0 + h, fill="#161616")
+        # on tall (full) screens, centre the hero content vertically
+        oy = max(0, (h - 780) // 2)
         # collage
         iw, ih = 420, min(590, h - 120)
         mx = W - M - iw - 30
-        my = y0 + 70
+        my = y0 + 70 + oy
         im1 = self.A.tk_cover("hero", "1637536701306-3214e9cec64a", iw, ih, 0.25, gray=True)
         i1 = cv.create_image(mx, my, image=im1, anchor="nw", tags=("par1",))
         c1 = cv.create_rectangle(mx, my, mx + iw, my + ih, fill=theme.ACCENT, outline="", tags=("par1",))
@@ -64,11 +66,11 @@ class HomePage(Page):
                               theme.INK, fill=theme.ACCENT, center="★", font=F("mono", 12, "bold"),
                               tags=("par1",))
         # headline
-        kick = cv.create_text(M, y0 + 72, text="AK1—THRIFT  /  EST. 2026  /  VOL. 07 — AUTUMN DROP",
+        kick = cv.create_text(M, y0 + 72 + oy, text="AK1—THRIFT  /  EST. 2026  /  VOL. 07 — AUTUMN DROP",
                               font=F("mono", 13, "bold"), fill=theme.INK, anchor="nw", tags=("par0",))
         hf = F("display", 150)
         lh = 150
-        b1 = y0 + 120 + lh * 1.25
+        b1 = y0 + 120 + oy + lh * 1.25
         l1 = Letters(self, M - 4, b1, "SECOND", hf, theme.BONE, theme.INK, tags=("par0",))
         l1b = Letters(self, M - 4 + l1.w + 30, b1, "HAND.", hf, theme.ACCENT, theme.INK, tags=("par0",))
         b2 = b1 + lh * 1.08
